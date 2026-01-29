@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Modern Web Design</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f4f6f8;
+      color: #333;
+    }
+
+
+    header {
+      background: #0a3d62;
+      padding: 15px 50px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 24px;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin-left: 20px;
+      font-size: 16px;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    
+    .hero {
+      background: linear-gradient(to right, #1e3799, #4a69bd);
+      color: white;
+      padding: 80px 20px;
+      text-align: center;
+    }
+
+    .hero h2 {
+      font-size: 40px;
+      margin-bottom: 15px;
+    }
+
+    .hero p {
+      font-size: 18px;
+      margin-bottom: 25px;
+    }
+
+    .hero button {
+      padding: 12px 25px;
+      border: none;
+      background: #feca57;
+      color: #000;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .hero button:hover {
+      background: #ff9f43;
+    }
+
+    
+    .services {
+      padding: 60px 50px;
+      text-align: center;
+    }
+
+    .services h2 {
+      font-size: 32px;
+      margin-bottom: 40px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 25px;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .card h3 {
+      margin-bottom: 15px;
+      color: #1e3799;
+    }
+
+    .card p {
+      font-size: 15px;
+    }
+
+    
+    footer {
+      background: #0a3d62;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      margin-top: 40px;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+      }
+
+      nav {
+        margin-top: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  
+  <header>
+    <h1>Our game</h1>
+    <nav>
+      <a href="">Home</a>
+      <a href="">Services</a>
+      <a href="">About</a>
+      <a href="">Contact</a>
+    </nav>
+  </header>
+
+  
+  <section class="hero">
+    <h2>Welcome to Our Game</h2>
+    <p>Enjoy with our Game</p>
+    <a href="https://www.cargames.com/Bike-Simulator-3d-Supermoto-2#goog_game_inter">
+    <button>
+        Start Game
+      </button>
+    </a>
+  </section>
+        </body>
+       </html>
