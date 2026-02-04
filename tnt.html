@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>HTML+CSS Fighting Game — Human Characters</title>
+<style>
+  :root{
+    --bg:#0f1720;
+    --arena:#16202a;
+    --accent:#8ec5ff;
+    --danger:#ff6b6b;
+    --health-bg:#2b3942;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial;color:#e6f0ff;background:var(--bg);}
+  .container{display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px;}
+  h1{margin:0;font-size:18px;color:var(--accent)}
+  #hud{width:920px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .bar-wrap{width:420px;background:var(--health-bg);border-radius:12px;padding:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);}
+  .bar-inner{height:18px;background:linear-gradient(90deg,#4ae0a0,#32c9ff);border-radius:10px;width:100%;transition:width 0.15s linear;}
+  .bar-label{font-size:12px;margin-bottom:6px;display:flex;justify-content:space-between;color:#cfe8ff;padding:0 6px;}
+  #score{font-size:14px;color:#cfe8ff}
+
+  /* Arena */
+  #arena{width:920px;height:420px;background:var(--arena);border-radius:12px;position:relative;overflow:hidden;
+         box-shadow:0 10px 30px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.02);}
+  .ground{position:absolute;left:0;right:0;bottom:0;height:70px;background:linear-gradient(180deg,#0e1114,#14181b);box-shadow:0 -4px 20px rgba(0,0,0,0.6);}
+
+  /* Character base */
+  .fighter{
+    width:64px;height:140px;position:absolute;bottom:70px;display:flex;flex-direction:column;align-items:center;
+    transform-origin:center bottom; user-select:none;
+  }
+  /* simple human made of divs */
+  .head{width:36px;height:36px;border-radius:50%;background:#f5d6c6;border:2px solid rgba(0,0,0,0.15);margin-top:6px;box-shadow:0 2px 0 rgba(0,0,0,0.2) inset;}
+  .torso{width:48px;height:64px;background:linear-gradient(180deg,#234a9a,#18356f);border-radius:8px;margin-top:6px;position:relative;}
+  .arm{width:12px;height:44px;background:#f5d6c6;position:absolute;top:6px;border-radius:8px;transform-origin:top center;}
+  .arm.left{left:-12px}
+  .arm.right{right:-12px}
+  .leg{width:16px;height:46px;background:#111827;border-radius:8px;margin-top:8px;display:inline-block}
+  .legs{display:flex;gap:8px;margin-top:8px}
+
+  /* player vs enemy color variations */
+  .player .torso{background:linear-gradient(180deg,#0077ff,#004ea6);}
+  .enemy .torso{background:linear-gradient(180deg,#ff4d4d,#a61b1b);}
+
+  /* attack "sword/hand" hitbox */
+  .hitbox{position:absolute;width:34px;height:18px;background:rgba(255,255,255,0.03);pointer-events:none;display:block;border-radius:6px;}
+
+  /* animations */
+  .attacking .arm.right{animation:attack-right 220ms ease forwards;}
+  .attacking .arm.left{animation:attack-left 220ms ease forwards;}
+  .blocking .arm.left,.blocking .arm.right{transform:translateY(-6px) rotate(-20deg);}
+  @keyframes attack-right{
+    0%{transform:rotate(0deg) translateY(0);right:-12px}
+    40%{transform:rotate(-40deg) translateY(-8px);right:-10px}
+    100%{transform:rotate(-10deg) translateY(0);right:-6px}
+  }
+  @keyframes attack-left{
+    0%{transform:rotate(0deg) translateY(0);left:-12px}
+    40%{transform:rotate(40deg) translateY(-8px);left:-10px}
+    100%{transform:rotate(10deg) translateY(0);left:-6px}
+  }
+
+  /* hit flash */
+  .hurt{animation:hurtFlash 180ms 2;}
+  @keyframes hurtFlash{0%{filter:hue-rotate(0deg) saturate(100%)}50%{filter:hue-rotate(120deg) saturate(250%)}100%{filter:none}}
+
+  /* floating ui text */
+  .roundText{position:absolute;left:50%;top:12px;transform:translateX(-50%);color:#dff;opacity:0.95;background:rgba(0,0,0,0.25);padding:6px 10px;border-radius:8px;font-size:13px}
+
+  /* small helper */
+  .credits{font-size:12px;color:#a9c;opacity:0.8;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Minimal HTML/CSS Fighting Game — Human Characters</h1>
+
+  <div id="hud">
+    <div style="width:420px;">
+      <div class="bar-label"><span>PLAYER</span><span id="pHealthPct">100%</span></div>
+      <div class="bar-wrap"><div id="pBar" class="bar-inner" style="width:100%"></div></div>
+    </div>
+
+    <div id="score">Round <span id="roundNum">1</span> • Press R to reset</div>
+
+    <div style="width:420px;text-align:right;">
+      <div class="bar-label"><span id="eName">ENEMY</span><span id="eHealthPct">100%</span></div>
+      <div class="bar-wrap"><div id="eBar" class="bar-inner" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <div id="arena">
+    <div class="roundText" id="message">Fight!</div>
+
+    <!-- Player (left) -->
+    <div id="player" class="fighter player" style="left:120px;">
+      <div class="head"></div>
+      <div class="torso">
+        <div class="arm left"></div>
+        <div class="arm right" style="right:-12px"></div>
+      </div>
+      <div class="legs">
+        <div class="leg"></div>
+        <div class="leg"></div>
+      </div>
+      <div class="hitbox" id="pHit" style="display:none;"></div>
+    </div>
+
+    <!-- Enemy (right) -->
+    <div id="enemy" class="fighter enemy" style="left:700px;">
+      <div class="head"></div>
+      <div class="torso">
+        <div class="arm left"></div>
+        <div class="arm right" style="right:-12px"></div>
+      </div>
+      <div class="legs">
+        <div class="leg"></div>
+        <div class="leg"></div>
+      </div>
+      <div class="hitbox" id="eHit" style="display:none;"></div>
+    </div>
+
+    <div class="ground"></div>
+  </div>
+
+  <div class="credits">Controls — A/D move • W jump • Space attack • Shift block • R reset</div>
+</div>
+
+<script>
+/* ----- Game variables ----- */
+const playerEl = document.getElementById('player');
+const enemyEl  = document.getElementById('enemy');
+const pHitEl   = document.getElementById('pHit');
+const eHitEl   = document.getElementById('eHit');
+const msgEl    = document.getElementById('message');
+const pBarEl   = document.getElementById('pBar');
+const eBarEl   = document.getElementById('eBar');
+const pPctEl   = document.getElementById('pHealthPct');
+const ePctEl   = document.getElementById('eHealthPct');
+const roundNum = document.getElementById('roundNum');
+
+const ARENA = { left: 40, right: 880-64 }; // arena px bounds for fighters
+let game = {
+  round: 1,
+  running: true,
+  lastWinner: null
+};
+
+const player = {
+  x: 120, y:0, vx:0, vy:0, w:64, h:140,
+  speed: 3.2, jump: 9.2,
+  facing: 1, attacking:false, blocking:false,
+  health: 100, maxHealth:100, invuln:0
+};
+
+const enemy = {
+  x: 700, y:0, vx:0, vy:0, w:64, h:140,
+  speed: 2.6, jump: 8.0,
+  facing: -1, attacking:false, blocking:false,
+  health: 100, maxHealth:100, invuln:0,
+  aiTimer:0, state:'idle'
+};
+
+const gravity = 0.6;
+
+/* ----- Input ----- */
+const keys = {};
+window.addEventListener('keydown',(e)=>{ keys[e.key.toLowerCase()] = true; if(e.key==='r' || e.key==='R') reset(); });
+window.addEventListener('keyup',(e)=>{ keys[e.key.toLowerCase()] = false; });
+
+/* ----- Helper functions ----- */
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function px(v){ return `${v}px`; }
+function setMessage(t,timeout=1000){
+  msgEl.textContent = t;
+  msgEl.style.opacity = '0.98';
+  clearTimeout(msgEl._t);
+  msgEl._t = setTimeout(()=>msgEl.style.opacity = '0.0', timeout);
+}
+
+/* ----- Hit detection (AABB) ----- */
+function aabb(ax,ay,aw,ah,bx,by,bw,bh){
+  return !(ax+aw < bx || ax > bx+bw || ay+ah < by || ay > by+bh);
+}
+
+/* ----- Apply damage, with block & invulnerability ----- */
+function applyDamage(target, amount, sourceFacing){
+  if(target.invuln > 0) return false; // ignore
+  if(target.blocking && Math.sign(target.facing) === Math.sign(sourceFacing) * -1){
+    // blocking reduces damage significantly and creates little knockback
+    amount = Math.max(1, Math.floor(amount * 0.35));
+    // small stun/backstep
+    target.vx += (sourceFacing > 0 ? 2 : -2);
+    target.invuln = 18;
+  } else {
+    target.invuln = 18; // brief invuln frames
+    target.vx += (sourceFacing > 0 ? 6 : -6);
+  }
+  target.health = clamp(target.health - amount, 0, target.maxHealth);
+  return true;
+}
+
+/* ----- Game loop ----- */
+let last = performance.now();
+function loop(now){
+  const dt = (now-last)/16.666; // ~1 at 60fps
+  last = now;
+  if(game.running){
+    update(dt);
+    render();
+    checkWin();
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ----- Update logic ----- */
+function update(dt){
+  // PLAYER INPUT
+  player.blocking = !!keys['shift'];
+  if(keys['a']) { player.vx = -player.speed; player.facing = -1; }
+  else if(keys['d']) { player.vx = player.speed; player.facing = 1; }
+  else player.vx = 0;
+
+  // Jump
+  if(keys['w'] && Math.abs(player.vy) < 0.001 && player.y === 0) { player.vy = -player.jump; }
+
+  // Attack
+  if(keys[' '] && !player.attacking && !player.blocking){
+    player.attacking = true;
+    player.attackFrames = 14; // frames attack is active
+    // play CSS anim
+    playerEl.classList.add('attacking');
+    setTimeout(()=> playerEl.classList.remove('attacking'), 220);
+  }
+
+  // simple auto-cancel attack after frames
+  if(player.attacking){
+    player.attackFrames--;
+    if(player.attackFrames <= 0) player.attacking = false;
+  }
+
+  // gravity
+  player.vy += gravity * dt;
+  player.y += player.vy * dt;
+  if(player.y > 0){ player.y = 0; player.vy = 0; }
+
+  // position clamps
+  player.x = clamp(player.x + player.vx * dt, ARENA.left, ARENA.right);
+
+  // enemy AI: basic
+  enemy.aiTimer -= dt;
+  if(enemy.aiTimer <= 0){
+    // pick action
+    enemy.aiTimer = 40 + Math.random()*80;
+    const dist = player.x - enemy.x;
+    if(Math.abs(dist) > 160){
+      enemy.state = 'approach';
+    } else if(Math.abs(dist) < 60 && Math.random() < 0.6){
+      enemy.state = (Math.random() < 0.6) ? 'attack' : 'block';
+    } else {
+      enemy.state = 'idle';
+    }
+  }
+
+  // execute AI state
+  if(enemy.state === 'approach'){
+    enemy.facing = (player.x > enemy.x) ? 1 : -1;
+    enemy.vx = enemy.speed * Math.sign(player.x - enemy.x);
+  } else if(enemy.state === 'attack'){
+    if(!enemy.attacking){
+      enemy.attacking = true;
+      enemy.attackFrames = 16;
+      enemyEl.classList.add('attacking');
+      setTimeout(()=> enemyEl.classList.remove('attacking'), 240);
+    }
+    enemy.vx = 0;
+  } else if(enemy.state === 'block'){
+    enemy.blocking = true;
+    enemy.vx = 0;
+    setTimeout(()=> enemy.blocking=false, 120 + Math.random()*200);
+  } else {
+    enemy.vx = 0;
+  }
+
+  // enemy attack duration
+  if(enemy.attacking){
+    enemy.attackFrames--;
+    if(enemy.attackFrames <= 0) enemy.attacking = false;
+  }
+
+  // enemy physics (gravity) - flat ground here
+  enemy.vy += gravity * dt;
+  enemy.y += enemy.vy * dt;
+  if(enemy.y > 0){ enemy.y = 0; enemy.vy = 0; }
+
+  enemy.x = clamp(enemy.x + enemy.vx * dt, ARENA.left, ARENA.right);
+
+  // Facing adjustments so characters look at each other
+  player.facing = (player.facing === 0) ? 1 : player.facing;
+  if(player.x < enemy.x) { player.facing = 1; enemy.facing = -1; } else { player.facing = -1; enemy.facing = 1; }
+
+  // invulnerability ticks
+  if(player.invuln > 0) player.invuln--;
+  if(enemy.invuln > 0) enemy.invuln--;
+
+  // Attack hit detection
+  const attackReach = 40;
+  if(player.attacking && player.attackFrames >= 6 && player.attackFrames <= 12){
+    const px = player.x + (player.facing>0? player.w : -attackReach);
+    const py = 70; // ground offset
+    const hitRect = {x: Math.min(px, px+attackReach), y:0, w:attackReach, h:140};
+    const enRect = {x: enemy.x, y:0, w:enemy.w, h:enemy.h};
+    if(aabb(hitRect.x,hitRect.y,hitRect.w,hitRect.h,enRect.x,enRect.y,enRect.w,enRect.h)){
+      // apply damage once per attack frame window
+      if(!player._hitThisAttack){
+        const damaged = applyDamage(enemy, 12, player.facing);
+        if(damaged){
+          enemyEl.classList.add('hurt');
+          setTimeout(()=>enemyEl.classList.remove('hurt'), 220);
+        }
+      }
+      player._hitThisAttack = true;
+    } else {
+      player._hitThisAttack = false;
+    }
+  }
+
+  if(enemy.attacking && enemy.attackFrames >= 6 && enemy.attackFrames <= 12){
+    const ex = enemy.x + (enemy.facing>0? enemy.w : -attackReach);
+    const hitRect = {x: Math.min(ex, ex+attackReach), y:0, w:attackReach, h:140};
+    const plRect = {x: player.x, y:0, w:player.w, h:player.h};
+    if(aabb(hitRect.x,hitRect.y,hitRect.w,hitRect.h,plRect.x,plRect.y,plRect.w,plRect.h)){
+      if(!enemy._hitThisAttack){
+        // damage less if player is blocking and in direction
+        const damaged = applyDamage(player, 10, enemy.facing);
+        if(damaged){ playerEl.classList.add('hurt'); setTimeout(()=>playerEl.classList.remove('hurt'),220); }
+      }
+      enemy._hitThisAttack = true;
+    } else {
+      enemy._hitThisAttack = false;
+    }
+  }
+
+  // slow friction for vx
+  player.vx *= 0.92;
+  enemy.vx *= 0.92;
+
+  // update DOM health bars
+  pBarEl.style.width = (player.health / player.maxHealth * 100) + '%';
+  eBarEl.style.width = (enemy.health / enemy.maxHealth * 100) + '%';
+  pPctEl.textContent = Math.round(player.health) + '%';
+  ePctEl.textContent = Math.round(enemy.health) + '%';
+}
+
+/* ----- Render DOM positions ----- */
+function render(){
+  // translate character elements based on x and y
+  playerEl.style.left = px(player.x);
+  playerEl.style.bottom = px(70 + player.y);
+  // flip scale to face direction
+  playerEl.style.transform = `scaleX(${player.facing})`;
+
+  enemyEl.style.left = px(enemy.x);
+  enemyEl.style.bottom = px(70 + enemy.y);
+  enemyEl.style.transform = `scaleX(${enemy.facing})`;
+
+  // optionally show hitboxes for debug (hidden by default)
+  // position hitboxes near arms
+  const phx = player.x + (player.facing>0 ? player.w : -40);
+  pHitEl.style.left = px(phx);
+  pHitEl.style.bottom = '120px';
+
+  const ehx = enemy.x + (enemy.facing>0 ? enemy.w : -40);
+  eHitEl.style.left = px(ehx);
+  eHitEl.style.bottom = '120px';
+}
+
+/* ----- Win detection ----- */
+function checkWin(){
+  if(player.health <= 0 || enemy.health <= 0){
+    game.running = false;
+    const winner = (player.health > enemy.health) ? 'Player' : 'Enemy';
+    setMessage(winner + ' wins!', 2200);
+    game.lastWinner = winner;
+    game.round++;
+    roundNum.textContent = game.round;
+    // small reset after delay
+    setTimeout(()=> {
+      // give short respawn
+      resetRound();
+      game.running = true;
+    }, 1600);
+  }
+}
+
+/* ----- Reset round or full reset ----- */
+function resetRound(){
+  player.health = player.maxHealth;
+  enemy.health = enemy.maxHealth;
+  player.x = 120; player.vx = 0; player.y = 0; player.vy = 0;
+  enemy.x = 700; enemy.vx = 0; enemy.y = 0; enemy.vy = 0;
+  player.attacking = false; enemy.attacking = false;
+  player.blocking = false; enemy.blocking = false;
+  player.invuln = 0; enemy.invuln = 0;
+  setMessage('Round ' + game.round, 900);
+}
+
+function reset(){
+  game.round = 1;
+  roundNum.textContent = '1';
+  resetRound();
+  game.running = true;
+  setMessage('Fight!', 900);
+}
+
+/* ----- Start loop ----- */
+setMessage('Fight!', 700);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
